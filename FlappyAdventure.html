@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <base href="." />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flappy Adventure | Un jeu simple mais addictif</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        touch-action: none;
+      }
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(#87ceeb, #e0f6ff);
+        font-family: Arial, sans-serif;
+      }
+      @keyframes floatClouds {
+        from {
+          transform: translateX(100%);
+        }
+        to {
+          transform: translateX(-100%);
+        }
+      }
+      .cloud {
+        position: absolute;
+        opacity: 0.7;
+        filter: blur(3px);
+        z-index: 1;
+      }
+      .cloud1 {
+        animation: floatClouds 30s linear infinite;
+        top: 10%;
+      }
+      .cloud2 {
+        animation: floatClouds 25s linear infinite;
+        top: 30%;
+      }
+      .cloud3 {
+        animation: floatClouds 35s linear infinite;
+        top: 60%;
+      }
+      #game-container {
+        position: relative;
+        width: 400px;
+        height: 600px;
+        overflow: hidden;
+        background: linear-gradient(180deg, #1a2980 0%, #26d0ce 100%);
+        border-radius: 10px;
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+      }
+      #game-canvas {
+        background: transparent;
+      }
+      #score,
+      #best-score {
+        position: absolute;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        z-index: 10;
+      }
+      #score {
+        top: 20px;
+        left: 20px;
+        font-size: 40px;
+      }
+      #best-score {
+        top: 20px;
+        right: 20px;
+        font-size: 20px;
+      }
+      #current-level {
+        position: absolute;
+        top: 60px;
+        left: 20px;
+        color: white;
+        font-size: 18px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      .screen {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        z-index: 20;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 20px;
+        border-radius: 10px;
+        width: 80%;
+      }
+      .button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 20px;
+        background: linear-gradient(45deg, #ffd700, #ffa500);
+        color: #fff;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        transform-origin: center;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+      .button:hover {
+        background: linear-gradient(45deg, #ffa500, #ffd700);
+        transform: scale(1.1) rotate(-2deg);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+      }
+      .level-up {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        padding: 20px;
+        border-radius: 15px;
+        background: linear-gradient(45deg, #00f260, #0575e6);
+        box-shadow: 0 0 30px rgba(0, 242, 96, 0.5);
+        text-align: center;
+        color: white;
+        font-size: 24px;
+        z-index: 30;
+        animation: levelUpAnim 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+      @keyframes levelUpAnim {
+        0% {
+          transform: translate(-50%, -50%) scale(0.5);
+          opacity: 0;
+        }
+        50% {
+          transform: translate(-50%, -50%) scale(1.1);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+      }
+      .game-over-text {
+        color: red;
+        font-size: 48px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        animation: pulse 1s infinite;
+      }
+      #final-score,
+      #final-level {
+        margin: 15px 0;
+        font-size: 20px;
+      }
+      #retry-button {
+        background: linear-gradient(45deg, #4caf50, #45a049);
+        color: white;
+        font-weight: bold;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+      #retry-button:hover {
+        background: linear-gradient(45deg, #45a049, #4caf50);
+      }
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.1);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      #instructions {
+        font-size: 16px;
+        margin: 15px 0;
+        line-height: 1.4;
+      }
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-5px) rotate(-1deg);
+        }
+        75% {
+          transform: translateX(5px) rotate(1deg);
+        }
+      }
+      .particle {
+        position: absolute;
+        pointer-events: none;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
+        animation: float 3s linear infinite;
+      }
+      @keyframes float {
+        0% {
+          transform: translateY(0) rotate(0deg);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-100vh) rotate(360deg);
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <div id="score">0</div>
+      <div id="best-score">Meilleur: 0</div>
+      <div id="current-level">Niveau: Débutant</div>
+      <canvas id="game-canvas"></canvas>
+      <div id="start-screen" class="screen">
+        <h1>Flappy Adventure</h1>
+        <div id="instructions">
+          Tapez sur l'écran ou appuyez sur ESPACE<br />
+          pour faire voler l'oiseau
+        </div>
+        <button class="button" id="start-button">Jouer</button>
+      </div>
+      <div id="game-over-screen" class="screen" style="display: none">
+        <h1 class="game-over-text">GAME OVER !!</h1>
+        <div id="final-score">Score: 0</div>
+        <div id="final-level">Niveau atteint: Débutant</div>
+        <button class="button" id="retry-button">Rejouer</button>
+      </div>
+      <div id="level-up" class="level-up" style="display: none">
+        <h2>Félicitations!</h2>
+        <p>Vous passez au niveau: <span id="new-level">Amateur</span></p>
+      </div>
+      <svg class="cloud cloud1" width="100" height="40" viewBox="0 0 100 40">
+        <path
+          fill="white"
+          d="M10 30 Q25 10 40 30 Q60 10 80 30 Q90 20 90 30 L90 35 L10 35 Z"
+        />
+      </svg>
+      <svg class="cloud cloud2" width="80" height="30" viewBox="0 0 80 30">
+        <path
+          fill="white"
+          d="M5 20 Q20 5 35 20 Q50 5 65 20 Q75 10 75 20 L75 25 L5 25 Z"
+        />
+      </svg>
+      <svg class="cloud cloud3" width="120" height="50" viewBox="0 0 120 50">
+        <path
+          fill="white"
+          d="M15 35 Q35 15 55 35 Q80 15 95 35 Q105 25 105 35 L105 40 L15 40 Z"
+        />
+      </svg>
+    </div>
+    <script>
+      const canvas = document.getElementById('game-canvas')
+      const ctx = canvas.getContext('2d')
+      const scoreElement = document.getElementById('score')
+      const bestScoreElement = document.getElementById('best-score')
+      const startScreen = document.getElementById('start-screen')
+      const gameOverScreen = document.getElementById('game-over-screen')
+      const startButton = document.getElementById('start-button')
+      const retryButton = document.getElementById('retry-button')
+      const finalScoreElement = document.getElementById('final-score')
+      const currentLevelElement = document.getElementById('current-level')
+      const levelUpScreen = document.getElementById('level-up')
+
+      canvas.width = 400
+      canvas.height = 600
+
+      const config = {
+        gravity: 0.4,
+        jumpForce: -7,
+        pipeWidth: 60,
+        pipeGap: 150,
+        pipeSpacing: 150,
+        baseSpeed: 2.5,
+        speedIncrease: 0.00005,
+      }
+
+      const levels = [
+        { name: 'Débutant', minScore: 0, maxScore: 150, speedMultiplier: 1 },
+        { name: 'Amateur', minScore: 150, maxScore: 400, speedMultiplier: 1.2 },
+        {
+          name: 'Semi-Pro',
+          minScore: 400,
+          maxScore: 800,
+          speedMultiplier: 1.4,
+        },
+        { name: 'Pro', minScore: 800, maxScore: 1500, speedMultiplier: 1.6 },
+        {
+          name: 'Legend',
+          minScore: 1500,
+          maxScore: Infinity,
+          speedMultiplier: 2,
+        },
+      ]
+
+      let currentLevel = 0
+
+      let gameState = {
+        player: {
+          x: 100,
+          y: canvas.height / 2,
+          velocity: 0,
+          width: 40,
+          height: 40,
+          flapTime: 0,
+        },
+        pipes: [],
+        score: 0,
+        bestScore: parseInt(localStorage.getItem('bestScore')) || 0,
+        isPlaying: false,
+        frame: 0,
+        lastTime: 0,
+        speed: config.baseSpeed,
+      }
+
+      // Initialize audio
+      const jumpSound = new Audio(
+        'data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ4AAABw/4D/cP+A/3D/gP9w/4AA'
+      )
+      const scoreSound = new Audio(
+        'data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ4AAACAgICA//+AgICAgICAAAEA'
+      )
+      const crashSound = new Audio(
+        'data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQMAAACA/4D/gP+A/4D/gP+A/4D/'
+      )
+
+      function initGame() {
+        currentLevel = 0
+        gameState = {
+          player: {
+            x: 100,
+            y: canvas.height / 2,
+            velocity: 0,
+            width: 40,
+            height: 40,
+            flapTime: 0,
+          },
+          pipes: [],
+          score: 0,
+          bestScore: gameState.bestScore,
+          isPlaying: true,
+          frame: 0,
+          lastTime: performance.now(),
+          speed: config.baseSpeed,
+        }
+
+        scoreElement.textContent = '0'
+        bestScoreElement.textContent = 'Meilleur: ' + gameState.bestScore
+        currentLevelElement.textContent = 'Niveau: ' + levels[currentLevel].name
+        levelUpScreen.style.display = 'none'
+        updateDifficulty()
+      }
+
+      function jump() {
+        gameState.player.velocity = config.jumpForce
+        jumpSound.currentTime = 0
+        jumpSound.play()
+        createParticles(gameState.player.x, gameState.player.y)
+      }
+
+      function createParticles(x, y) {
+        for (let i = 0; i < 5; i++) {
+          const particle = document.createElement('div')
+          particle.className = 'particle'
+          particle.style.left = x + 'px'
+          particle.style.top = y + 'px'
+          particle.style.width = Math.random() * 8 + 2 + 'px'
+          particle.style.height = particle.style.width
+          particle.style.animationDuration = Math.random() * 2 + 1 + 's'
+          document.getElementById('game-container').appendChild(particle)
+
+          setTimeout(() => particle.remove(), 3000)
+        }
+      }
+
+      function drawPlayer() {
+        for (let i = 0; i < 5; i++) {
+          ctx.fillStyle = `rgba(255, 215, 0, ${0.2 - i * 0.04})`
+          ctx.beginPath()
+          ctx.arc(
+            gameState.player.x +
+              gameState.player.width / 2 -
+              i * 8 * gameState.speed,
+            gameState.player.y + gameState.player.height / 2,
+            (gameState.player.width / 2 - i * 3) * 0.8,
+            0,
+            Math.PI * 2
+          )
+          ctx.fill()
+        }
+
+        const gradient = ctx.createRadialGradient(
+          gameState.player.x + gameState.player.width / 2,
+          gameState.player.y + gameState.player.height / 2,
+          0,
+          gameState.player.x + gameState.player.width / 2,
+          gameState.player.y + gameState.player.height / 2,
+          gameState.player.width / 2
+        )
+        gradient.addColorStop(0, '#FFD700')
+        gradient.addColorStop(1, '#FFA500')
+
+        ctx.fillStyle = gradient
+        ctx.beginPath()
+        ctx.arc(
+          gameState.player.x + gameState.player.width / 2,
+          gameState.player.y + gameState.player.height / 2,
+          gameState.player.width / 2,
+          0,
+          Math.PI * 2
+        )
+        ctx.fill()
+
+        const wingOffset = Math.sin(gameState.player.flapTime * 0.2) * 8
+        ctx.fillStyle = '#FFA500'
+        ctx.beginPath()
+        ctx.ellipse(
+          gameState.player.x + gameState.player.width / 4,
+          gameState.player.y + gameState.player.height / 2 + wingOffset,
+          gameState.player.width / 3,
+          gameState.player.height / 4,
+          0,
+          0,
+          Math.PI * 2
+        )
+        ctx.fill()
+      }
+
+      function drawPipes() {
+        gameState.pipes.forEach((pipe) => {
+          const glowGradient = ctx.createLinearGradient(
+            pipe.x,
+            0,
+            pipe.x + config.pipeWidth,
+            0
+          )
+          glowGradient.addColorStop(0, 'rgba(46, 204, 113, 0.2)')
+          glowGradient.addColorStop(1, 'rgba(39, 174, 96, 0)')
+
+          ctx.fillStyle = glowGradient
+          ctx.fillRect(pipe.x - 20, 0, config.pipeWidth + 40, canvas.height)
+
+          const gradient = ctx.createLinearGradient(
+            pipe.x,
+            0,
+            pipe.x + config.pipeWidth,
+            0
+          )
+          gradient.addColorStop(0, '#2ecc71')
+          gradient.addColorStop(1, '#27ae60')
+
+          ctx.fillStyle = gradient
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+          ctx.shadowBlur = 10
+
+          ctx.fillRect(pipe.x, 0, config.pipeWidth, pipe.top)
+          ctx.fillRect(
+            pipe.x,
+            pipe.top + config.pipeGap,
+            config.pipeWidth,
+            canvas.height - (pipe.top + config.pipeGap)
+          )
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'
+          ctx.fillRect(pipe.x + 5, 0, 2, pipe.top)
+          ctx.fillRect(
+            pipe.x + 5,
+            pipe.top + config.pipeGap,
+            2,
+            canvas.height - (pipe.top + config.pipeGap)
+          )
+
+          ctx.shadowBlur = 0
+        })
+      }
+
+      function generatePipe() {
+        const minHeight = 50
+        const maxHeight = canvas.height - config.pipeGap - minHeight
+        const height =
+          Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight
+
+        gameState.pipes.push({
+          x: canvas.width,
+          top: height,
+          passed: false,
+        })
+      }
+
+      function updateDifficulty() {
+        config.baseSpeed = 2.5 * levels[currentLevel].speedMultiplier
+        config.gravity = 0.4 * levels[currentLevel].speedMultiplier
+        config.pipeGap = Math.max(150 - currentLevel * 15, 90)
+        config.pipeSpacing = Math.max(150 - currentLevel * 10, 100)
+      }
+
+      function checkLevelUp() {
+        if (
+          currentLevel < levels.length - 1 &&
+          gameState.score >= levels[currentLevel + 1].minScore
+        ) {
+          currentLevel++
+          showLevelUp()
+          updateDifficulty()
+        }
+      }
+
+      function showLevelUp() {
+        const levelUpScreen = document.getElementById('level-up')
+        levelUpScreen.style.display = 'block'
+        levelUpScreen.style.animation = 'levelUpAnim 0.8s'
+
+        const levelUpSound = new Audio('data:audio/wav;base64,...')
+        levelUpSound.play()
+
+        document.getElementById('new-level').textContent =
+          levels[currentLevel].name
+        currentLevelElement.textContent = 'Niveau: ' + levels[currentLevel].name
+
+        setTimeout(() => {
+          levelUpScreen.style.display = 'none'
+        }, 2000)
+      }
+
+      function update(currentTime) {
+        if (!gameState.isPlaying) return
+
+        const deltaTime = Math.min(
+          (currentTime - gameState.lastTime) / 16.67,
+          2
+        )
+        gameState.lastTime = currentTime
+
+        gameState.score = Math.floor(gameState.frame / 120)
+        scoreElement.textContent = gameState.score
+
+        gameState.player.velocity += config.gravity * deltaTime
+        gameState.player.y += gameState.player.velocity * deltaTime
+        gameState.player.flapTime += deltaTime
+
+        gameState.player.y = Math.max(
+          0,
+          Math.min(canvas.height - gameState.player.height, gameState.player.y)
+        )
+
+        gameState.speed =
+          config.baseSpeed + gameState.frame * config.speedIncrease
+
+        if (gameState.frame % config.pipeSpacing === 0) {
+          generatePipe()
+        }
+
+        gameState.pipes.forEach((pipe) => {
+          pipe.x -= gameState.speed * deltaTime
+        })
+
+        gameState.pipes = gameState.pipes.filter(
+          (pipe) => pipe.x > -config.pipeWidth
+        )
+
+        if (checkCollision()) {
+          gameOver()
+        }
+
+        checkLevelUp()
+
+        gameState.frame++
+      }
+
+      function checkCollision() {
+        const padding = 5
+        if (
+          gameState.player.y <= padding ||
+          gameState.player.y + gameState.player.height >=
+            canvas.height - padding
+        ) {
+          return true
+        }
+
+        return gameState.pipes.some((pipe) => {
+          const hitboxPadding = 5
+          return (
+            gameState.player.x + gameState.player.width - hitboxPadding >
+              pipe.x &&
+            gameState.player.x + hitboxPadding < pipe.x + config.pipeWidth &&
+            (gameState.player.y + hitboxPadding < pipe.top ||
+              gameState.player.y + gameState.player.height - hitboxPadding >
+                pipe.top + config.pipeGap)
+          )
+        })
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        drawPlayer()
+        drawPipes()
+      }
+
+      function gameOver() {
+        gameState.isPlaying = false
+        crashSound.currentTime = 0
+        crashSound.play()
+
+        if (gameState.score > gameState.bestScore) {
+          gameState.bestScore = gameState.score
+          localStorage.setItem('bestScore', gameState.bestScore)
+          bestScoreElement.textContent = 'Meilleur: ' + gameState.bestScore
+          finalScoreElement.textContent =
+            'Nouveau record: ' + gameState.score + ' !'
+        } else {
+          finalScoreElement.textContent = 'Score: ' + gameState.score
+        }
+
+        document.getElementById('final-level').textContent =
+          'Niveau atteint: ' + levels[currentLevel].name
+        gameOverScreen.style.display = 'block'
+
+        const container = document.getElementById('game-container')
+        container.style.animation = 'shake 0.5s'
+        container.addEventListener('animationend', () => {
+          container.style.animation = ''
+        })
+      }
+
+      function gameLoop(currentTime) {
+        update(currentTime)
+        draw()
+        if (gameState.isPlaying) {
+          requestAnimationFrame(gameLoop)
+        }
+      }
+
+      function initSounds() {
+        jumpSound.volume = 0.3
+        scoreSound.volume = 0.3
+        crashSound.volume = 0.3
+
+        const silentSound = new Audio(
+          'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=='
+        )
+        silentSound.play().catch(() => {})
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (
+          (e.code === 'ArrowUp' || e.code === 'Space') &&
+          gameState.isPlaying
+        ) {
+          e.preventDefault()
+          jump()
+        }
+      })
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (gameState.isPlaying) {
+          e.preventDefault() // Prevent double-firing on mobile devices
+          jump()
+        }
+      })
+
+      startButton.addEventListener('click', () => {
+        startScreen.style.display = 'none'
+        initSounds()
+        initGame()
+        requestAnimationFrame(gameLoop)
+      })
+
+      retryButton.addEventListener('click', () => {
+        gameOverScreen.style.display = 'none'
+        initGame()
+        requestAnimationFrame(gameLoop)
+      })
+
+      // Start the game loop
+      requestAnimationFrame((time) => {
+        gameState.lastTime = time
+        gameLoop(time)
+      })
+    </script>
+  </body>
+</html>
